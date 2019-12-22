@@ -1,0 +1,80 @@
+version: '3'
+
+services:
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    restart: unless-stopped
+    ports:
+      - 7891:80
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: root
+    networks:
+      - phpnet
+
+  mysql:
+    image: mysql:5.7.22
+    container_name: mysql-container
+    restart: unless-stopped
+    tty: true
+    ports: 
+      - 3360:3360
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      SERVICE_NAME: mysql
+    volumes:
+      - ./:/root/host
+      - /media/shantanu/storage/database/mysql:/var/lib/mysql/
+    networks: 
+      - phpnet
+  php72:
+    build:
+      context: .
+      dockerfile: config/Dockerfile-php-7.2
+    container_name: php-72
+    volumes:
+      - ./projects/:/var/www/html
+    ports:
+      # host:container
+      - 9000:9000
+    depends_on: 
+      - mysql
+    networks: 
+      - phpnet
+
+  php56:
+    build:
+      context: .
+      dockerfile: config/Dockerfile-php-5.6
+    container_name: php-56
+    volumes:
+      - ./projects/:/var/www/html
+    ports:
+      # host:container
+      - 9001:9000
+    depends_on: 
+      - mysql
+    networks:
+      - phpnet
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: nginx-container
+    ports: 
+      # host:container
+      - 80:80
+    volumes:
+      - ./projects/:/var/www/html
+      - ./vhosts:/etc/nginx/conf.d
+    depends_on:
+      - php72
+      - php56
+      - mysql
+    networks: 
+      - phpnet
+
+networks: 
+  phpnet:
